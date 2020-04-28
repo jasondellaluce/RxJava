@@ -48,20 +48,35 @@ public class SingleAmbTest extends RxJavaTest {
 	/* Because the Single is defined as "cold" by default as specifciation
 	 * , and should not iterate on the iterator before a subscription. */
 	@Test
-	public void shouldAcceptMaliciousIterable() {
+	public void shouldAcceptFaultyIterable() {
 		Single.amb(new MaliciousIterable());
 	}
 	
 	@Test(expected = NoSuchElementException.class)
-	public void shouldErrorOnMaliciousIterableIteration() {
+	public void shouldErrorOnFaultyIterableIteration() {
 		Single.amb(new MaliciousIterable()).blockingGet();
 	}
 	
 	@Test
-	public void shouldRespectEmittedValuesOrder() {
+	public void shouldRespectOrder() {
 		Single<Integer> first = Single.just(1).delay(3, TimeUnit.SECONDS);
 		Single<Integer> second = Single.just(2);
 		int result = Single.ambArray(first, second).blockingGet(); 
+		assertEquals(result, 2);
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Test
+	public void shouldRespectOrderOnLargeInput() {
+		Single<Integer> first = Single.just(1).delay(50, TimeUnit.MILLISECONDS);
+		Single<Integer> second = Single.just(2);
+		
+		Single<Integer>[] testArray = new Single[10000000];
+		Arrays.fill(testArray, Single.never());
+		testArray[0] = first;	
+		testArray[testArray.length - 1] = second;
+		
+		int result = Single.ambArray(testArray).blockingGet(); 
 		assertEquals(result, 2);
 	}
 	
