@@ -13,6 +13,7 @@
 
 package io.reactivex.rxjava3.internal.operators.single;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.*;
 
 import io.reactivex.rxjava3.core.*;
@@ -35,11 +36,15 @@ public final class SingleCache<T> extends Single<T> implements SingleObserver<T>
 
     Throwable error;
 
-    @SuppressWarnings("unchecked")
     public SingleCache(SingleSource<? extends T> source) {
+        this(source, EMPTY);
+    }
+    
+    @SuppressWarnings({ "unchecked", "rawtypes"})
+    public SingleCache(SingleSource<? extends T> source, CacheDisposable[] observers) {
         this.source = source;
         this.wip = new AtomicInteger();
-        this.observers = new AtomicReference<>(EMPTY);
+        this.observers = new AtomicReference<>(Arrays.copyOf(observers, observers.length));
     }
 
     @Override
@@ -66,7 +71,7 @@ public final class SingleCache<T> extends Single<T> implements SingleObserver<T>
         }
     }
 
-    boolean add(CacheDisposable<T> observer) {
+    public boolean add(CacheDisposable<T> observer) {
         for (;;) {
             CacheDisposable<T>[] a = observers.get();
             if (a == TERMINATED) {
@@ -84,7 +89,7 @@ public final class SingleCache<T> extends Single<T> implements SingleObserver<T>
     }
 
     @SuppressWarnings("unchecked")
-    void remove(CacheDisposable<T> observer) {
+    public void remove(CacheDisposable<T> observer) {
         for (;;) {
             CacheDisposable<T>[] a = observers.get();
             int n = a.length;
@@ -118,6 +123,10 @@ public final class SingleCache<T> extends Single<T> implements SingleObserver<T>
             }
         }
     }
+    
+    public CacheDisposable<?>[] getObservers() {
+    	return observers.get();
+    }
 
     @Override
     public void onSubscribe(Disposable d) {
@@ -148,7 +157,7 @@ public final class SingleCache<T> extends Single<T> implements SingleObserver<T>
         }
     }
 
-    static final class CacheDisposable<T>
+    public static final class CacheDisposable<T>
     extends AtomicBoolean
     implements Disposable {
 
@@ -158,7 +167,7 @@ public final class SingleCache<T> extends Single<T> implements SingleObserver<T>
 
         final SingleCache<T> parent;
 
-        CacheDisposable(SingleObserver<? super T> actual, SingleCache<T> parent) {
+        public CacheDisposable(SingleObserver<? super T> actual, SingleCache<T> parent) {
             this.downstream = actual;
             this.parent = parent;
         }
